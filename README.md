@@ -1,4 +1,9 @@
-# vue-test-ts
+# simple-vue-player
+简易本地音乐播放器
+
+- 支持波形显示
+- 支持文件上传
+- 支持播放列表
 
 ## Project setup
 ```
