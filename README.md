@@ -5,6 +5,9 @@
 - 支持文件上传
 - 支持播放列表
 
+## Example
+
+<https://eastwind1.github.io/simple-vue-player/>
 ## Project setup
 ```
 yarn install
