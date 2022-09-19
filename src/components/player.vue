@@ -1,79 +1,57 @@
 <template>
-  <div class="d-flex justify-content-center" @dragover.prevent @drop="dropFile">
-    <div>
-      <!-- 波形区域 --->
+  <div>
+    <div class="d-flex justify-content-center" @dragover.prevent @drop="dropFile">
       <div>
-        <canvas
-          class="border"
-          ref="canvas"
-          style="width: 40rem; height: 20rem"
-        ></canvas>
-      </div>
-      <form class="form-horizontal">
-        <label class="form-lable" for="waveColor">波形颜色：</label>
-        <input
-          id="waveColor"
-          type="color"
-          class="form-control-inline"
-          v-model="waveColor"
-        />
-      </form>
-      <br />
-      <!-- 播放器 -->
-      <div>
-        <audio ref="player" controls @ended="playEnd()"></audio>
-      </div>
-      <br />
-      <!-- 文件导入 -->
-      <div>
-        <span v-if="!playList.length">选择或拖拽至任意区域上传</span>
-        <input
-          ref="fileInput"
-          class="form-control"
-          type="file"
-          accept=".mp3,.wav,.flac"
-          @change="fileUpload"
-        />
+        <!-- 波形区域 --->
         <div>
-          <span id="upload-success-info" hidden>上传成功</span>
-          <span id="upload-fail-info" hidden>上传失败</span>
+          <canvas class="border" ref="canvas" style="width: 40rem; height: 20rem"></canvas>
         </div>
-      </div>
-      <br />
-      <!-- 播放列表 -->
-      <div>
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            v-model="listCycle"
-            id="listCycle"
-          />
-          <label class="form-check-label" for="listCycle"> 列表循环 </label>
+        <form class="form-horizontal">
+          <label class="form-lable" for="waveColor">波形颜色：</label>
+          <input id="waveColor" type="color" class="form-control-inline" v-model="waveColor" />
+        </form>
+        <br />
+        <!-- 播放器 -->
+        <div>
+          <audio ref="player" controls @ended="playEnd()"></audio>
         </div>
-        <a class="btn btn-secondary" @click="playListButtonClick()"
-          ><i class="bi bi-list-ol"></i
-        ></a>
-        <ul v-if="showPlayList" class="list-group">
-          <li
-            v-for="(item, index) in playList"
-            :key="index"
-            :style="{ color: currentPlay == index ? 'red' : 'black' }"
-            class="list-group-item"
-            @click="playListClick(index)"
-          >
-            {{ item.name }}
-          </li>
-        </ul>
+        <br />
+        <!-- 文件导入 -->
+        <div>
+          <span v-if="!playList.length">选择或拖拽至任意区域上传</span>
+          <input ref="fileInput" class="form-control" type="file" accept=".mp3,.wav,.flac" @change="fileUpload" />
+        </div>
+        <br />
+        <!-- 播放列表 -->
+        <div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" v-model="listCycle" id="listCycle" />
+            <label class="form-check-label" for="listCycle"> 列表循环 </label>
+          </div>
+          <a class="btn btn-secondary" @click="playListButtonClick()"><i class="bi bi-list-ol"></i></a>
+          <ul v-if="showPlayList" class="list-group">
+            <li v-for="(item, index) in playList" :key="index"
+              :style="{ color: currentPlay == index ? 'red' : 'black' }" class="list-group-item"
+              @click="playListClick(index)">
+              {{ item.name }}
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
+    <SearchComponent class="mt-3" @itemSelect="itemSelect"></SearchComponent>
   </div>
 </template>
 
 <script lang="ts">
 import { Options, Vue } from "vue-class-component";
 import { Notify } from "./notify.vue";
-@Options({})
+import SearchComponent from "./search.vue";
+@Options({
+  components: {
+    SearchComponent
+  },
+})
 export default class PlayerComponent extends Vue {
   /**
    * AudioContext
@@ -82,7 +60,7 @@ export default class PlayerComponent extends Vue {
   /**
    * AudioAnalyser
    */
-  analySer!: AnalyserNode;
+  analyser!: AnalyserNode;
   /**
    * AudioSourceNode
    */
@@ -135,17 +113,17 @@ export default class PlayerComponent extends Vue {
     setTimeout(() => {
       if (!this.audioContext) {
         this.audioContext = new AudioContext();
-        this.analySer = this.audioContext.createAnalyser();
-        this.analySer.fftSize = 2048;
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
         this.audioSourceNode = this.audioContext.createMediaElementSource(
           this.player
         );
-        this.audioSourceNode.connect(this.analySer);
-        this.analySer.connect(this.audioContext.destination);
-        this.waveData = new Uint8Array(this.analySer.frequencyBinCount);
-        this.analySer.getByteFrequencyData(this.waveData);
+        this.audioSourceNode.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+        this.waveData = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(this.waveData);
         setInterval(() => {
-          this.analySer.getByteFrequencyData(this.waveData);
+          this.analyser.getByteFrequencyData(this.waveData);
           this.paintWave(this.waveData);
         }, 10);
       }
@@ -180,16 +158,27 @@ export default class PlayerComponent extends Vue {
     } else {
       Notify.success("上传成功");
     }
+    this.addToPlayList(file.name, file);
+  }
+  /**
+   * 播放列表添加
+   */
+  addToPlayList(name: string, item: string | File) {
     const existIndex = this.playList.findIndex(
-      (item) => item.name == file.name
+      (item) => item.name == name
     );
     let playIndex = 0;
     if (existIndex != -1) {
       playIndex = existIndex;
     } else {
-      const url = URL.createObjectURL(file);
+      let url;
+      if (item instanceof File) {
+        url = URL.createObjectURL(item);
+      } else {
+        url = item;
+      }
       this.playList.push({
-        name: file.name,
+        name: name,
         url: url,
       });
       playIndex = this.playList.length - 1;
@@ -246,7 +235,15 @@ export default class PlayerComponent extends Vue {
       this.loadFileAndPlay(event.dataTransfer.files[0]);
     }
   }
+  /**
+   * 搜索框回车事件监听
+   */
+  itemSelect(info: { name: string, url: string }) {
+    this.addToPlayList(info.name, info.url);
+  }
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+
+</style>

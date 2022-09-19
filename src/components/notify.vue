@@ -1,13 +1,10 @@
 <template>
-  <div
-    class="notify"
-    :class="{
-      show: isShow,
-      hidden: !isShow,
-      success: level == 2,
-      warning: level == 1,
-    }"
-  >
+  <div class="notify" :class="{
+    show: isShow,
+    hidden: !isShow,
+    success: level == 2,
+    warning: level == 1,
+  }">
     {{ message }}
   </div>
 </template>
@@ -31,14 +28,13 @@ export default class NotifyComponent extends Vue {
 
 export class Notify {
   private static notify(msg: string, level: Level): void {
-    let div = document.createElement("div") as HTMLDivElement;
+    let div = document.getElementById("notify") as HTMLDivElement;
     if (div) {
       div.remove();
-      window.clearTimeout();
     }
+
     div = document.createElement("div") as HTMLDivElement;
     div.id = "notify";
-
     document.body.appendChild(div);
     let notify = createApp(NotifyComponent).mount("#notify") as NotifyComponent;
     notify.message = msg;
@@ -49,7 +45,6 @@ export class Notify {
     }, 2000);
     setTimeout(() => {
       div.remove();
-      window.clearTimeout();
     }, 3000);
   }
   static info(msg: string) {

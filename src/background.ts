@@ -21,6 +21,7 @@ async function createWindow() {
         .ELECTRON_NODE_INTEGRATION as unknown as boolean,
       contextIsolation: !(process.env
         .ELECTRON_NODE_INTEGRATION as unknown) as boolean,
+      webSecurity: false
     },
   });
 
